@@ -1,0 +1,36 @@
+:root{
+  --bg:#0b0f1a; --card:#121a2a; --text:#e6edf3; --muted:#9fb0c3; --accent:#7bc4ff;
+  --ok:#52d273; --warn:#ffcc66; --err:#ff6b6b;
+  --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: radial-gradient(1200px 700px at 20% -5%, #123, transparent),
+              radial-gradient(1000px 600px at 120% 10%, #102235, transparent),
+              var(--bg);
+  color:var(--text);
+}
+.container{max-width:980px;margin:40px auto;padding:0 16px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.08); border-radius:var(--radius); box-shadow:var(--shadow);
+  padding:24px; margin:16px 0}
+h1{font-size:32px;margin:0 0 6px}
+p.lead{color:var(--muted);margin-top:0}
+button,input{
+  font:inherit; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.15);
+  background:#0f1a2a; color:var(--text);
+}
+button{cursor:pointer}
+button.primary{background:linear-gradient(135deg,#2563eb,#06b6d4); border:none}
+.grid{display:grid; gap:16px}
+.grid.two{grid-template-columns: 1fr 1fr}
+label{display:block; color:var(--muted); font-size:14px; margin-bottom:6px}
+input[type="text"], input[type="number"]{width:100%}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#0f1a2a;border:1px solid rgba(255,255,255,.1);font-size:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+a{color:var(--accent)}
+.output{white-space:pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+footer{color:var(--muted);font-size:13px;margin-top:24px}
+img.logo{height:48px;vertical-align:middle}

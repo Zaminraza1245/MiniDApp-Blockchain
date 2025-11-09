@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini dApp — Sepolia</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.12.1/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <img src="logo.png" alt="logo" class="logo" />
+      <h1 style="margin-left:10px">Mini dApp — Sepolia</h1>
+      <span id="net-badge" class="badge" style="margin-left:10px">Network: <em>unknown</em></span>
+    </div>
+    <p class="lead">
+      A tiny decentralized app that reads and writes to a Solidity contract on <strong>Sepolia</strong> using MetaMask + ethers.js.
+    </p>
+
+    <div class="card">
+      <h2>1) Connect Wallet</h2>
+      <p>Click to connect your MetaMask. The app will ask to switch to <strong>Sepolia</strong> if needed.</p>
+      <div class="row">
+        <button id="btn-connect" class="primary">Connect MetaMask</button>
+        <span id="acct" class="badge">Account: -</span>
+      </div>
+      <div class="output" id="log" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2>2) Contract Details</h2>
+      <p>Paste your deployed contract address below after deploying in Remix.</p>
+      <label>Contract Address (Sepolia)</label>
+      <input type="text" id="contractAddress" placeholder="0x... (paste deployed address)" />
+      <p>Current values:</p>
+      <div class="grid two">
+        <div><strong>message:</strong> <span id="val-message">-</span></div>
+        <div><strong>number:</strong> <span id="val-number">-</span></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="btn-refresh">Read Values</button>
+        <a id="etherscanLink" target="_blank" class="badge" href="#">View on Etherscan</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3) Write Functions</h2>
+      <div class="grid two">
+        <div>
+          <label for="newMessage">setMessage(string)</label>
+          <input id="newMessage" type="text" placeholder="type a new message" />
+          <button id="btn-set-message" style="margin-top:8px">Set Message</button>
+        </div>
+        <div>
+          <label for="newNumber">setNumber(uint)</label>
+          <input id="newNumber" type="number" placeholder="e.g., 42" />
+          <button id="btn-set-number" style="margin-top:8px">Set Number</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="btn-increment">increment()</button>
+      </div>
+      <div class="output" id="txout" style="margin-top:12px"></div>
+    </div>
+
+    <footer>
+      <p>
+        Built for the Mini dApp assignment. Learn more at
+        <a href="https://remix.ethereum.org" target="_blank" rel="noopener">Remix</a> and
+        <a href="https://docs.ethers.org/v6/" target="_blank" rel="noopener">ethers.js v6</a>.
+      </p>
+    </footer>
+  </div>
+
+<script>
+(async function(){
+  const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7"; // 11155111
+  const log = (msg) => {
+    const el = document.getElementById("log");
+    el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
+  };
+
+  const abi = [
+    {"type":"constructor","inputs":[{"name":"_message","type":"string"},{"name":"_number","type":"uint256"}]},
+    {"type":"function","name":"getMessage","stateMutability":"view","inputs":[],"outputs":[{"type":"string"}]},
+    {"type":"function","name":"getNumber","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},
+    {"type":"function","name":"increment","stateMutability":"nonpayable","inputs":[],"outputs":[]},
+    {"type":"function","name":"owner","stateMutability":"view","inputs":[],"outputs":[{"type":"address"}]},
+    {"type":"function","name":"setMessage","stateMutability":"nonpayable","inputs":[{"name":"_message","type":"string"}],"outputs":[]},
+    {"type":"function","name":"setNumber","stateMutability":"nonpayable","inputs":[{"name":"_number","type":"uint256"}],"outputs":[]},
+    {"type":"event","name":"MessageChanged","inputs":[{"name":"by","type":"address","indexed":true},{"name":"newMessage","type":"string","indexed":false}],"anonymous":false},
+    {"type":"event","name":"NumberChanged","inputs":[{"name":"by","type":"address","indexed":true},{"name":"newNumber","type":"uint256","indexed":false}],"anonymous":false}
+  ];
+
+  let provider, signer, account, contract;
+
+  function etherscanUrl(addr){
+    return `https://sepolia.etherscan.io/address/${addr}`;
+  }
+
+  function getAddressInput(){
+    return document.getElementById("contractAddress").value.trim();
+  }
+
+  function setNetBadge(text){
+    document.getElementById("net-badge").innerHTML = "Network: <em>" + text + "</em>";
+  }
+
+  async function ensureSepolia(){
+    const net = await window.ethereum.request({ method: "eth_chainId" });
+    if (net !== SEPOLIA_CHAIN_ID_HEX){
+      try{
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: SEPOLIA_CHAIN_ID_HEX }] });
+        setNetBadge("Sepolia");
+      }catch(err){
+        log("Please switch MetaMask to Sepolia.");
+        setNetBadge("wrong network");
+        throw err;
+      }
+    }else{
+      setNetBadge("Sepolia");
+    }
+  }
+
+  async function connect(){
+    if (!window.ethereum){
+      alert("MetaMask not detected. Install it first.");
+      return;
+    }
+    try{
+      await ensureSepolia();
+      const accs = await window.ethereum.request({ method: "eth_requestAccounts" });
+      account = accs[0];
+      document.getElementById("acct").textContent = "Account: " + account;
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      log("Connected: " + account);
+    }catch(e){
+      log("Connect failed: " + (e.message || e));
+    }
+  }
+
+  async function initContract(){
+    const addr = getAddressInput();
+    if (!addr || !ethers.isAddress(addr)){
+      alert("Paste a valid contract address first.");
+      return null;
+    }
+    contract = new ethers.Contract(addr, abi, signer || provider);
+    document.getElementById("etherscanLink").href = etherscanUrl(addr);
+    return contract;
+  }
+
+  async function readValues(){
+    try{
+      const c = await initContract();
+      if (!c) return;
+      const [msg, num] = await Promise.all([c.getMessage(), c.getNumber()]);
+      document.getElementById("val-message").textContent = msg;
+      document.getElementById("val-number").textContent = num.toString();
+    }catch(e){
+      log("Read failed: " + (e.message || e));
+    }
+  }
+
+  async function txWrap(promise){
+    const out = document.getElementById("txout");
+    out.textContent = "Sending transaction...";
+    const tx = await promise;
+    out.textContent = "Tx sent: " + tx.hash + "\nWaiting confirmations...";
+    const receipt = await tx.wait();
+    out.textContent = "Mined in block " + receipt.blockNumber + "\nStatus: " + (receipt.status ? "Success" : "Failed") + "\nTx: " + tx.hash;
+    await readValues();
+  }
+
+  document.getElementById("btn-connect").addEventListener("click", connect);
+  document.getElementById("btn-refresh").addEventListener("click", readValues);
+  document.getElementById("btn-set-message").addEventListener("click", async () => {
+    try{
+      const c = await initContract(); if (!c) return;
+      const m = document.getElementById("newMessage").value;
+      await txWrap(c.setMessage(m));
+    }catch(e){ log("setMessage failed: " + (e.message || e)); }
+  });
+  document.getElementById("btn-set-number").addEventListener("click", async () => {
+    try{
+      const c = await initContract(); if (!c) return;
+      const n = document.getElementById("newNumber").value;
+      await txWrap(c.setNumber(n));
+    }catch(e){ log("setNumber failed: " + (e.message || e)); }
+  });
+  document.getElementById("btn-increment").addEventListener("click", async () => {
+    try{
+      const c = await initContract(); if (!c) return;
+      await txWrap(c.increment());
+    }catch(e){ log("increment failed: " + (e.message || e)); }
+  });
+
+  // show current network if MM is present
+  if (window.ethereum){
+    try{
+      const net = await window.ethereum.request({ method: "eth_chainId" });
+      setNetBadge(net === SEPOLIA_CHAIN_ID_HEX ? "Sepolia" : "wrong network");
+    }catch{}
+  }
+})();
+</script>
+</body>
+</html>
